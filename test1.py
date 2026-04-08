@@ -1,51 +1,45 @@
-# 先導入後面會用到的套件
-import requests # 請求工具
-from bs4 import BeautifulSoup # 解析工具
-import time # 用來暫停程式
- 
+import requests
+from bs4 import BeautifulSoup
+import time
+
 # 要爬的股票
-stock = ["1101","2330","1102"]
-	for i in range(len(stock)): # 迴圈依序爬股價
+stocks = ["1101", "2330", "1102"]
 
-	    # 現在處理的股票
+for stockid in stocks:
+    try:
+        # Yahoo 股市網址
+        url = f"https://tw.stock.yahoo.com/quote/{stockid}.TW"
 
-	    stockid = stock[i]
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
 
-	    # 網址塞入股票編號
+        r = requests.get(url, headers=headers)
+        soup = BeautifulSoup(r.text, "html.parser")
 
-	    url = "https://tw.stock.yahoo.com/quote/"+stockid+".TW"
+        # 抓股價（比較穩的寫法）
+        price_tag = soup.find("fin-streamer", {"data-field": "regularMarketPrice"})
 
-	    # 發送請求
+        if price_tag:
+            price = price_tag.text
+        else:
+            price = "抓不到"
 
-	    r = requests.get(url)
+        message = f"📈 股票 {stockid}\n💰 即時股價：{price}"
 
-	    # 解析回應的 HTML
+        # Telegram 設定
+        token = "你的BOT_TOKEN"
+        chat_id = "你的CHAT_ID"
 
-	    soup = BeautifulSoup(r.text, 'html.parser')
+        tg_url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = {
+            "chat_id": chat_id,
+            "text": message
+        }
 
-	    # 定位股價
+        requests.post(tg_url, data=data)
 
-	    price = soup.find('span',class_=["Fz(32px) Fw(b) Lh(1) Mend(16px) D(f) Ai(c) C($c-trend-down)","Fz(32px) Fw(b) Lh(1) Mend(16px) D(f) Ai(c)","Fz(32px) Fw(b) Lh(1) Mend(16px) D(f) Ai(c) C($c-trend-up)"]).getText()
-     	    # 回報的訊息 (可自訂)
+        time.sleep(3)
 
-	    message = "股票 "+stockid+" 即時股價為 "+price
-
-	    # 用 telegram bot 回報股價
-
-	    # bot token
-
-	    token = "輸入你的 bot token"
-
-	    # 使用者 id
-
-	    chat_id="輸入你的 telegram id"
-
-	    # bot 送訊息
-
-	    url = f"https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={message}"
-
-	    requests.get(url)
-
-	    # 每次都停 3 秒
-
-	    time.sleep(3)
+    except Exception as e:
+        print(f"{stockid} 發生錯誤:", e)
